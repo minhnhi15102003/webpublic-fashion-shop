@@ -11,14 +11,12 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
-  // Lấy token từ localStorage sau khi client mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const t = window.localStorage.getItem("accessToken");
-    setToken(t);
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem("accessToken"));
+    }
   }, []);
 
-  // Gọi API khi đã có token
   useEffect(() => {
     if (!token) {
       setLoading(false);
@@ -26,25 +24,21 @@ export default function OrdersPage() {
     }
 
     const fetchOrders = async () => {
-      try {
-        const res = await fetch("http://localhost:3001/orders", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_END_POINT}/orders`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const data = await res.json();
-        setOrders(data.orders);
-      } catch (err) {
-        console.error("Failed to fetch orders:", err);
-      } finally {
-        setLoading(false);
-      }
+      const data = await res.json();
+      setOrders(data.orders || []);
+      setLoading(false);
     };
 
     fetchOrders();
   }, [token]);
+
 
   if (loading) return <p>Loading...</p>;
 

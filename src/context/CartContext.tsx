@@ -1,4 +1,3 @@
-// context/CartContext.tsx
 "use client";
 
 import { CartItem } from "@/types/Cart";
@@ -24,19 +23,27 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
-const API = process.env.NEXT_PUBLIC_API_END_POINT || "https://e-commerce-rd5w.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_END_POINT;
 
-export const CartProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const token = localStorage.getItem("accessToken");
+  const [token, setToken] = useState<string | null>(null);
+
+  // Đọc token sau khi client mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem("accessToken"));
+    }
+  }, []);
 
   const fetchCart = useCallback(async () => {
+    if (!token) return;
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch(`${API}/cart`, {
         headers: {
@@ -44,129 +51,98 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Failed to fetch cart");
-      }
+
       const data = await res.json();
       setItems(data.carts || []);
     } catch (e: any) {
-      setError(e?.message || "Cannot load cart");
+      setError(e.message);
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+    if (token) fetchCart();
+  }, [token, fetchCart]);
 
   const addToCart = async (productId: number) => {
-    setError(null);
-    try {
-      const res = await fetch(`${API}/cart`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ productId }),
-      });
-      const items = await res.json();
-      setItems(items);
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Add to cart failed");
-      }
-      // refresh real cart to reconcile
-      await fetchCart();
-    } catch (e: any) {
-      setError(e?.message || "Add to cart error");
-      // rollback: refetch
-      await fetchCart();
-      throw e;
-    }
+    if (!token) return;
+
+    await fetch(`${API}/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ productId }),
+    });
+
+    await fetchCart();
   };
 
   const updateQuantityProduct = async (cartId: number, quantity: number) => {
-    try {
-      const res = await fetch(`${API}/cart/${cartId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ quantity }),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Remove failed");
-      }
-      await fetchCart();
-    } catch (e: any) {
-      setError(e?.message || "Remove error");
-    }
+    if (!token) return;
+
+    await fetch(`${API}/cart/${cartId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ quantity }),
+    });
+
+    await fetchCart();
   };
-  console.log(items, "items");
 
   const removeFromCart = async (cartId: number) => {
-    setError(null);
-    try {
-      const res = await fetch(`${API}/cart/${cartId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Remove failed");
-      }
-      await fetchCart();
-    } catch (e: any) {
-      setError(e?.message || "Remove error");
-    }
+    if (!token) return;
+
+    await fetch(`${API}/cart/${cartId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    await fetchCart();
   };
 
   const clearCart = async () => {
-    setError(null);
-    try {
-      const res = await fetch(`${API}/cart/clear`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Clear cart failed");
-      }
-      setItems([]);
-    } catch (e: any) {
-      setError(e?.message || "Clear error");
-    }
+    if (!token) return;
+
+    await fetch(`${API}/cart/clear`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setItems([]);
   };
 
-  const value: CartContextValue = {
-    items,
-    loading,
-    error,
-    cartCount: items.length,
-    refreshCart: fetchCart,
-    addToCart,
-    removeFromCart,
-    clearCart,
-    updateQuantityProduct,
-  };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider
+      value={{
+        items,
+        loading,
+        error,
+        cartCount: items.length,
+        refreshCart: fetchCart,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        updateQuantityProduct,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 };
 
-export function useCart() {
+export const useCart = () => {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used inside CartProvider");
   return ctx;
-}
+};
