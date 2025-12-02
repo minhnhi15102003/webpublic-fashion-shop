@@ -1,4 +1,3 @@
-// app/orders/page.tsx hoặc components/Orders.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -10,8 +9,22 @@ import { formatBigNumber } from "@/utils/formatBigNumber";
 export default function OrdersPage() {
   const [orders, setOrders] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem("accessToken");
+  const [token, setToken] = useState<string | null>(null);
+
+  // Lấy token từ localStorage sau khi client mount
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const t = window.localStorage.getItem("accessToken");
+    setToken(t);
+  }, []);
+
+  // Gọi API khi đã có token
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     const fetchOrders = async () => {
       try {
         const res = await fetch("http://localhost:3001/orders", {
@@ -20,6 +33,7 @@ export default function OrdersPage() {
             Authorization: `Bearer ${token}`,
           },
         });
+
         const data = await res.json();
         setOrders(data.orders);
       } catch (err) {
@@ -30,7 +44,7 @@ export default function OrdersPage() {
     };
 
     fetchOrders();
-  }, []);
+  }, [token]);
 
   if (loading) return <p>Loading...</p>;
 
