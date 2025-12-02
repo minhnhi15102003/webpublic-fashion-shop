@@ -31,7 +31,7 @@ async function getListProduct({
     categoryId,
     sort,
 }: GetListProductOpts): Promise<Product[]> {
-    const apiEndPoint = process.env.API_END_POINT;
+    const apiEndPoint = process.env.NEXT_PUBLIC_API_END_POINT || "https://e-commerce-rd5w.onrender.com";
     if (!apiEndPoint) {
         throw new Error("API_END_POINT is not defined in environment");
     }
@@ -59,15 +59,15 @@ async function getListProduct({
     if (sort && sort.trim() !== "") {
         params.set("sort", sort);
     }
-    console.log(params, 'params',url.toString());
+    console.log(params, 'params', url.toString());
 
 
     const res = await fetch(`${url.toString()}`, {
         next: { revalidate: 60 },
         //  cache: "no-cache"
     });
-    console.log(res,'resres');
-    
+    console.log(res, 'resres');
+
 
     if (!res.ok) {
         // có thể ném lỗi cụ thể hơn tùy cần
@@ -76,11 +76,11 @@ async function getListProduct({
 
     // giả sử API trả về shape { success, products, total }
     const data = (await res.json()) as ProductResponse;
-    console.log(data,'data');
-    
+    console.log(data, 'data');
+
     const listProduct = data.products
-    console.log(listProduct,'listProduct');
-    
+    console.log(listProduct, 'listProduct');
+
     return listProduct;
 }
 

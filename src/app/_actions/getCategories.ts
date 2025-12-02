@@ -5,7 +5,7 @@ import { ProductCategoryRs } from "../../types/ProductCategoryRs";
 
 
 async function getCategories() {
-    const apiEndPoint = process.env.API_END_POINT;
+    const apiEndPoint = process.env.NEXT_PUBLIC_API_END_POINT || "https://e-commerce-rd5w.onrender.com";
     console.log(apiEndPoint,'apiEndPoint');
     
     const rsCategory = await fetch(apiEndPoint + '/product/categories');
