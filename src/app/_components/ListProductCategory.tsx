@@ -3,7 +3,7 @@ import getCategories from "../_actions/getCategories";
 
 export const ListProductCategory = async () => {
   const listCategory = await getCategories();
-  //   console.log(listCategory, "listCategory");
+  const api = process.env.NEXT_PUBLIC_API_END_POINT || "https://e-commerce-rd5w.onrender.com";
   return (
     <section className="py-6  bg-gray-100">
       {
@@ -25,13 +25,13 @@ export const ListProductCategory = async () => {
                     </a>
                   </div>
                   <div className="lg:w-1/2 rounded-2xl overflow-hidden mt-6 lg:mt-0 flex justify-center">
-                    <img className="image" src={image} alt={name} />
+                    <img className="image" src={`${api}/${image}`} alt={name} />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="lg:w-1/2 rounded-2xl overflow-hidden mt-6 lg:mt-0 flex justify-center">
-                    <img className="image" src={image} alt={name} />
+                    <img className="image" src={`${api}/${image}`} alt={name} />
                   </div>
                   <div className="lg:w-1/2 flex flex-col justify-center items-center">
                     <h2 className="text-3xl font-bold mb-4 uppercase">{name}</h2>
