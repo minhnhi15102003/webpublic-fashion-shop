@@ -1,15 +1,19 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useCart } from "@/context/CartContext";
 import { formatBigNumber } from "@/utils/formatBigNumber";
 
+const API =
+  process.env.NEXT_PUBLIC_API_END_POINT || "http://localhost:3001";
+
 const Order = () => {
-    const token = localStorage.getItem("accessToken");
-  const API = process.env.NEXT_PUBLIC_API_END_POINT || "http://localhost:3001";
-  const { items ,refreshCart} = useCart();
-    const router = useRouter();
+  const { items, refreshCart } = useCart();
+  const router = useRouter();
+
+  const [token, setToken] = useState<string | null>(null);
   const [form, setForm] = useState({
     phone: "",
     email: "",
@@ -22,30 +26,45 @@ const Order = () => {
     postCode: "",
   });
 
+  // Lấy token từ localStorage CHỈ trên client sau khi mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const t = window.localStorage.getItem("accessToken");
+      setToken(t);
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
+    if (!token) {
+      toast.error("Bạn cần đăng nhập trước khi đặt hàng");
+      return;
+    }
+
     try {
       const res = await fetch(`${API}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-             Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(form),
       });
-      console.log(res, "res");
+
       if (!res.ok) throw new Error("Failed to submit order");
+
       const data = await res.json();
       console.log("Order success:", data);
-      refreshCart();
+
+      await refreshCart();
       toast.success("Order placed successfully!");
-      router.push("/order")
+      router.push("/order");
     } catch (err) {
       console.error(err);
-      alert("Order failed.");
+      toast.error("Order failed.");
     }
   };
 
@@ -131,72 +150,72 @@ const Order = () => {
                 </button>
               </form>
             </div>
-                  <div className="lg:p-10 mt-10 lg:mt-0">
-            <div className="md:px-5">
-              <ul className="space-y-3">
-                {!!items.length &&
-                  items.map((i) => (
-                    <li key={i.id} className="flex items-center gap-3">
-                      <div className="size-16 border border-gray rounded-md overflow-hidden">
-                        <img
-                          className="image"
-                          src={i.product.images[0]?.url}
-                          alt=""
-                        />
-                      </div>
-                      <p>
-                        {i.product.name} x <b>{i.quantity}</b>
-                      </p>
-                      <span className="ml-auto">
-                        {formatBigNumber(i.product.price, true)}
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-              <ul className="mt-6 space-y-4">
-                <li className="flex items-center justify-between">
-                  <span className="text-[14px]">
-                    Subtotal • {items.length} items
-                  </span>
-                  <span className="text-[14px]">
-                    {formatBigNumber(
-                      items.reduce(
-                        (a, b) => a + b.product.price * b.product.quantity,
-                        0
-                      ),
-                      true
-                    )}
-                  </span>
-                </li>
 
-                <li className="flex items-center justify-between">
-                  <span className="text-[14px]">Shipping</span>
-                  <span className="text-[14px]">Free</span>
-                </li>
+            <div className="lg:p-10 mt-10 lg:mt-0">
+              <div className="md:px-5">
+                <ul className="space-y-3">
+                  {!!items.length &&
+                    items.map((i) => (
+                      <li key={i.id} className="flex items-center gap-3">
+                        <div className="size-16 border border-gray rounded-md overflow-hidden">
+                          <img
+                            className="image"
+                            src={i.product.images[0]?.url}
+                            alt=""
+                          />
+                        </div>
+                        <p>
+                          {i.product.name} x <b>{i.quantity}</b>
+                        </p>
+                        <span className="ml-auto">
+                          {formatBigNumber(i.product.price, true)}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
 
-                <li className="flex items-center justify-between">
-                  <span className="text-[14px]">Estimated taxes</span>
-                  <span className="text-[14px]">0đ</span>
-                </li>
+                <ul className="mt-6 space-y-4">
+                  <li className="flex items-center justify-between">
+                    <span className="text-[14px]">
+                      Subtotal • {items.length} items
+                    </span>
+                    <span className="text-[14px]">
+                      {formatBigNumber(
+                        items.reduce(
+                          (a, b) => a + b.product.price * b.quantity,
+                          0
+                        ),
+                        true
+                      )}
+                    </span>
+                  </li>
 
-                <li className="flex items-center justify-between">
-                  <span className="text-lg font-bold">Total</span>
-                  <span className="text-lg font-bold">
-                    {" "}
-                    {formatBigNumber(
-                      items.reduce(
-                        (a, b) => a + b.product.price * b.product.quantity,
-                        0
-                      ),
-                      true
-                    )}
-                  </span>
-                </li>
-              </ul>
+                  <li className="flex items-center justify-between">
+                    <span className="text-[14px]">Shipping</span>
+                    <span className="text-[14px]">Free</span>
+                  </li>
+
+                  <li className="flex items-center justify-between">
+                    <span className="text-[14px]">Estimated taxes</span>
+                    <span className="text-[14px]">0đ</span>
+                  </li>
+
+                  <li className="flex items-center justify-between">
+                    <span className="text-lg font-bold">Total</span>
+                    <span className="text-lg font-bold">
+                      {formatBigNumber(
+                        items.reduce(
+                          (a, b) => a + b.product.price * b.quantity,
+                          0
+                        ),
+                        true
+                      )}
+                    </span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-          </div>
-    
         </div>
       </div>
     </section>
